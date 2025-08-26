@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Users, BarChart3, Shield, Clock, Star, Sparkles, Scissors, Heart, TrendingUp, ArrowRight, CheckCircle } from "lucide-react";
 import Image from 'next/image';
 import { Menu } from "lucide-react";
+import Link from 'next/link';
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -90,33 +91,7 @@ export default function HomePage() {
               <Menu className="w-8 h-8 text-pink-500" />
             </button>
 
-            {/* Menú horizontal en desktop */}
-            <ul className="hidden md:flex menu menu-horizontal bg-white/80 rounded-box shadow-lg px-4 py-2 items-center space-x-10 lg:space-x-20">
-              <li>
-                <a
-                  href="#features"
-                  className="px-8 py-3 rounded-full font-extrabold text-xl text-pink-500 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:text-purple-700 transition-all duration-300 border border-transparent hover:border-purple-200"
-                >
-                  Características
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#testimonials"
-                  className="px-8 py-3 rounded-full font-extrabold text-xl text-pink-500 hover:bg-gradient-to-r hover:from-pink-100 hover:to-purple-100 hover:text-purple-700 transition-all duration-300 border border-transparent hover:border-pink-200"
-                >
-                  Testimonios
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#pricing"
-                  className="px-8 py-3 rounded-full font-extrabold text-xl text-pink-500 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 hover:text-purple-700 transition-all duration-300 border border-transparent hover:border-purple-200"
-                >
-                  Precios
-                </a>
-              </li>
-            </ul>
+
 
             {/* Menú vertical hamburguesa en móvil */}
             {menuOpen && (
@@ -152,9 +127,11 @@ export default function HomePage() {
             )}
             
             <div className="flex items-center space-x-2 md:space-x-4">
-              <button className="px-4 py-2 text-base text-purple-600 border-2 border-purple-600 rounded-full hover:bg-purple-600 hover:text-white transition-all duration-300 font-bold md:px-8 md:py-3 md:text-xl">
-                Iniciar Sesión
-              </button>
+              <Link href="/login">
+                <button className="px-4 py-2 text-base text-purple-600 border-2 border-purple-600 rounded-full hover:bg-purple-600 hover:text-white transition-all duration-300 font-bold md:px-8 md:py-3 md:text-xl">
+                  Iniciar Sesión
+                </button>
+              </Link>
               <button className="px-4 py-2 text-base bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full hover:shadow-lg hover:scale-105 transition-all duration-300 font-bold md:px-8 md:py-3 md:text-xl">
                 Prueba Gratis
               </button>
@@ -309,6 +286,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-center">
+                <br/><br/>
                 <div className="text-6xl font-bold mb-4">14</div>
                 <div className="text-xl">Días de prueba gratuita</div>
                 <div className="text-lg opacity-90">Sin tarjeta de crédito</div>

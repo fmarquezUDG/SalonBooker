@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model TipoUsuario {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique(map: "nombre") @db.VarChar(50)
+
+  @@map("tipo_usuario")
+}
+
+model Salon {
+  id              Int            @id @default(autoincrement())
+  nombre          String         @db.VarChar(100)
+  direccion       String?        @db.VarChar(255)
+  contacto        String?        @db.VarChar(100)
+  aprobado        Boolean?       @default(false)
+  fecha_registro  DateTime?      @default(now()) @db.DateTime(0)
+  servicios_items ServicioItem[]
+  usuarios        Usuario[]
+
+  @@map("salones")
+}
+
+model Usuario {
+  id              Int                   @id @default(autoincrement())
+  nombre          String                @db.VarChar(100)
+  email           String                @unique(map: "email") @db.VarChar(100)
+  password        String                @db.VarChar(255)
+  tipo_usuario    usuarios_tipo_usuario
+  salon_id        Int?
+  activo          Boolean?              @default(true)
+  tipo_usuario_id Int?
+  citas           Cita[]
+  notificaciones  Notificacion[]
+  salon           Salon?                @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
+
+  @@index([salon_id], map: "salon_id")
+  @@map("usuarios")
+}
+
+model ServicioCategoria {
+  id            Int                    @id @default(autoincrement())
+  nombre        String                 @db.VarChar(100)
+  subcategorias ServicioSubcategoria[]
+
+  @@map("servicios_categorias")
+}
+
+model ServicioSubcategoria {
+  id           Int               @id @default(autoincrement())
+  nombre       String            @db.VarChar(100)
+  categoria_id Int
+  items        ServicioItem[]
+  categoria    ServicioCategoria @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "servicios_subcategorias_ibfk_1")
+
+  @@index([categoria_id], map: "categoria_id")
+  @@map("servicios_subcategorias")
+}
+
+model ServicioItem {
+  id              Int                  @id @default(autoincrement())
+  nombre          String               @db.VarChar(100)
+  subcategoria_id Int
+  salon_id        Int
+  duracion        Int
+  precio          Decimal              @db.Decimal(10, 2)
+  descripcion     String?              @db.Text
+  citas           Cita[]
+  subcategoria    ServicioSubcategoria @relation(fields: [subcategoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "servicios_items_ibfk_1")
+  salon           Salon                @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "servicios_items_ibfk_2")
+
+  @@index([subcategoria_id], map: "subcategoria_id")
+  @@index([salon_id], map: "salon_id")
+  @@map("servicios_items")
+}
+
+model Cita {
+  id          Int          @id @default(autoincrement())
+  usuario_id  Int
+  servicio_id Int
+  fecha       DateTime     @db.Date
+  hora        DateTime     @db.Time(0)
+  estado      EstadoCita?  @default(pendiente)
+  notas       String?      @db.Text
+  usuario     Usuario      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "citas_ibfk_1")
+  servicio    ServicioItem @relation(fields: [servicio_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "citas_ibfk_2")
+  pagos       Pago?
+
+  @@index([usuario_id], map: "usuario_id")
+  @@index([servicio_id], map: "servicio_id")
+  @@map("citas")
+}
+
+model Pago {
+  id         Int         @id @default(autoincrement())
+  cita_id    Int         @unique(map: "cita_id")
+  monto      Decimal     @db.Decimal(10, 2)
+  estado     EstadoPago? @default(pendiente)
+  metodo     String?     @db.VarChar(50)
+  fecha_pago DateTime?   @db.DateTime(0)
+  cita       Cita        @relation(fields: [cita_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pagos_ibfk_1")
+
+  @@map("pagos")
+}
+
+model Notificacion {
+  id          Int                 @id @default(autoincrement())
+  usuario_id  Int
+  tipo        TipoNotificacion
+  mensaje     String              @db.Text
+  fecha_envio DateTime?           @default(now()) @db.DateTime(0)
+  estado      EstadoNotificacion? @default(pendiente)
+  usuario     Usuario             @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "notificaciones_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+  @@map("notificaciones")
+}
+
+enum EstadoCita {
+  pendiente
+  confirmada
+  cancelada
+  completada
+}
+
+enum EstadoPago {
+  pendiente
+  pagado
+  fallido
+}
+
+enum TipoNotificacion {
+  whatsapp
+  push
+  email
+}
+
+enum EstadoNotificacion {
+  pendiente
+  enviada
+  fallida
+}
+
+enum usuarios_tipo_usuario {
+  admin_app
+  admin_salon
+  usuario
+}

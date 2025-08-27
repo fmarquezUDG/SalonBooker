@@ -20,7 +20,8 @@ import {
   Clock,
   Menu,
   Home,
-  Sparkles
+  Sparkles,
+  LogOut
 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
@@ -301,15 +302,21 @@ export default function SuperAdminDashboard() {
                 </button>
                 </div>
                 <br/>
-                <div className="border-t border-gray-200 p-3">
-                <Link 
-                    href="/" 
-                    className="flex items-center space-x-2 text-gray-600 hover:text-purple-600 transition-colors text-sm md:text-lg"
-                    onClick={() => setMenuOpen(false)}
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <button 
+                  onClick={() => {
+                    // Limpiar datos del localStorage
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('user');
+                    }
+                    // Redirigir al login
+                    window.location.href = '/login';
+                  }}
+                  className="w-full flex items-center space-x-3 px-6 py-4 text-red-600 hover:text-white hover:bg-red-600 transition-colors rounded-2xl border border-red-200"
                 >
-                    <Home className="w-3 h-3 md:w-5 md:h-5" />
-                    <span>Volver al sitio</span>
-                </Link>
+                  <LogOut className="w-6 h-6" />
+                  <span className="font-medium text-lg">Cerrar Sesión</span>
+                </button>
                 </div>
             </div>
             )}
@@ -380,15 +387,21 @@ export default function SuperAdminDashboard() {
             <span className="font-semibold text-xl">Configuración</span>
             </button>
         </nav>
-
         <div className="mt-8 pt-8 border-t border-gray-200">
-            <Link 
-            href="/" 
-            className="flex items-center space-x-3 px-6 py-4 text-gray-600 hover:text-purple-600 transition-colors rounded-2xl hover:bg-white/80"
-            >
-            <Home className="w-6 h-6" />
-            <span className="font-medium text-lg">Volver al sitio</span>
-            </Link>
+          <button 
+            onClick={() => {
+              // Limpiar datos del localStorage
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem('user');
+              }
+              // Redirigir al login
+              window.location.href = '/login';
+            }}
+            className="w-full flex items-center space-x-3 px-6 py-4 text-red-600 hover:text-white hover:bg-red-600 transition-colors rounded-2xl border border-red-200"
+          >
+            <LogOut className="w-6 h-6" />
+            <span className="font-medium text-lg">Cerrar Sesión</span>
+          </button>
         </div>
         </aside>
 

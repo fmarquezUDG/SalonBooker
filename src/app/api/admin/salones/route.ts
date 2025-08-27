@@ -1,19 +1,17 @@
-// src/app/api/admin/salones/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// Definir tipos para mayor claridad
 interface Usuario {
-  id: string;
+  id: number;
   email: string;
 }
 
 interface ServicioItem {
-  id: string;
+  id: number;
 }
 
 interface SalonWithRelations {
-  id: string;
+  id: number;
   nombre: string;
   direccion: string | null;
   aprobado: boolean;
@@ -46,7 +44,6 @@ export async function GET() {
     // Calcular estadísticas para cada salón
     const salonesConEstadisticas = await Promise.all(
       salones.map(async (salon: SalonWithRelations) => {
-        // Contar citas del mes actual para este salón
         const inicioMes = new Date();
         inicioMes.setDate(1);
         inicioMes.setHours(0, 0, 0, 0);
@@ -62,7 +59,6 @@ export async function GET() {
           }
         });
 
-        // Calcular ingresos del mes para este salón
         const ingresosMes = await prisma.pago.aggregate({
           _sum: {
             monto: true
@@ -80,7 +76,6 @@ export async function GET() {
           }
         });
 
-        // Obtener email del admin del salón
         const adminSalon = salon.usuarios.find((user: Usuario) => user.id);
         const email = adminSalon?.email || 'No disponible';
 

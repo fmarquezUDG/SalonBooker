@@ -23,6 +23,7 @@ model Salon {
   fecha_registro  DateTime?      @default(now()) @db.DateTime(0)
   servicios_items ServicioItem[]
   usuarios        Usuario[]
+  citas           Cita[]
 
   @@map("salones")
 }
@@ -87,16 +88,19 @@ model Cita {
   id          Int          @id @default(autoincrement())
   usuario_id  Int
   servicio_id Int
+  salon_id    Int
   fecha       DateTime     @db.Date
   hora        DateTime     @db.Time(0)
   estado      EstadoCita?  @default(pendiente)
   notas       String?      @db.Text
   usuario     Usuario      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "citas_ibfk_1")
   servicio    ServicioItem @relation(fields: [servicio_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "citas_ibfk_2")
+  salon       Salon        @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "citas_ibfk_3")
   pagos       Pago?
 
   @@index([usuario_id], map: "usuario_id")
   @@index([servicio_id], map: "servicio_id")
+  @@index([salon_id], map: "salon_id")
   @@map("citas")
 }
 

@@ -4,52 +4,41 @@ import { prisma } from '@/lib/db';
 
 // GET - Obtener servicios del salón
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const salonId = parseInt(id);
+    const salonId = parseInt(params.id, 10);
 
     const servicios = await prisma.servicioItem.findMany({
-      where: {
-        salon_id: salonId
-      },
-      orderBy: {
-        id: 'asc'
-      }
+      where: { salon_id: salonId },
+      orderBy: { id: 'asc' },
     });
 
-    const serviciosFormateados = servicios.map(servicio => ({
+    const serviciosFormateados = servicios.map((servicio) => ({
       id: servicio.id,
       nombre: servicio.nombre,
       descripcion: servicio.descripcion || 'Sin descripción',
       duracion: `${servicio.duracion || 60} min`,
       precio: `$${(Number(servicio.precio) || 0).toLocaleString('es-MX')}`,
-      activo: true
+      activo: true,
     }));
 
     console.log(`📋 Servicios del salón ${salonId}:`, serviciosFormateados.length);
-
     return NextResponse.json(serviciosFormateados);
-
   } catch (error) {
     console.error('Error al obtener servicios:', error);
-    return NextResponse.json(
-      { error: 'Error al obtener servicios' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Error al obtener servicios' }, { status: 500 });
   }
 }
 
 // POST - Crear nuevo servicio
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const salonId = parseInt(id);
+    const salonId = parseInt(params.id, 10);
     const body = await request.json();
     const { nombre, descripcion, duracion, precio } = body;
 
@@ -63,39 +52,36 @@ export async function POST(
       );
     }
 
-    let subcategoriaId = null;
-    
+    let subcategoriaId: number | null = null;
+
     // Intentar encontrar una subcategoría existente
     const subcategoriaExistente = await prisma.servicioSubcategoria.findFirst();
-    
+
     if (subcategoriaExistente) {
       subcategoriaId = subcategoriaExistente.id;
       console.log('✅ Usando subcategoría existente:', subcategoriaId);
     } else {
       // Si no existe ninguna, crear una por defecto
       console.log('⚠️ No hay subcategorías, creando una por defecto...');
-      
+
       // Primero crear categoría si no existe
       let categoria = await prisma.servicioCategoria.findFirst();
-      
+
       if (!categoria) {
-        // Crear categoría SIN campo descripcion
         categoria = await prisma.servicioCategoria.create({
-          data: {
-            nombre: 'General'
-          }
+          data: { nombre: 'General' }, // sin descripcion
         });
         console.log('✅ Categoría creada:', categoria.id);
       }
-      
-      // Crear subcategoría SIN campo descripcion
+
+      // Crear subcategoría sin descripcion
       const nuevaSubcategoria = await prisma.servicioSubcategoria.create({
         data: {
           nombre: 'General',
-          categoria_id: categoria.id
-        }
+          categoria_id: categoria.id,
+        },
       });
-      
+
       subcategoriaId = nuevaSubcategoria.id;
       console.log('✅ Subcategoría creada:', subcategoriaId);
     }
@@ -103,42 +89,41 @@ export async function POST(
     // Crear servicio con subcategoria_id
     const nuevoServicio = await prisma.servicioItem.create({
       data: {
-        nombre: nombre.trim(),
-        descripcion: descripcion?.trim() || null,
-        duracion: parseInt(duracion),
-        precio: parseFloat(precio),
+        nombre: String(nombre).trim(),
+        descripcion: descripcion ? String(descripcion).trim() : null,
+        duracion: parseInt(String(duracion), 10),
+        precio: parseFloat(String(precio)),
         salon_id: salonId,
-        subcategoria_id: subcategoriaId
-      }
+        subcategoria_id: subcategoriaId,
+      },
     });
 
     console.log('✅ Servicio creado exitosamente:', nuevoServicio.id, nuevoServicio.nombre);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Servicio creado exitosamente',
-      servicio: {
-        id: nuevoServicio.id,
-        nombre: nuevoServicio.nombre,
-        descripcion: nuevoServicio.descripcion,
-        duracion: nuevoServicio.duracion,
-        precio: nuevoServicio.precio
-      }
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Servicio creado exitosamente',
+        servicio: {
+          id: nuevoServicio.id,
+          nombre: nuevoServicio.nombre,
+          descripcion: nuevoServicio.descripcion,
+          duracion: nuevoServicio.duracion,
+          precio: nuevoServicio.precio,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('❌ Error al crear servicio:', error);
-    
-    // Error más detallado
     if (error instanceof Error) {
       console.error('Mensaje de error:', error.message);
       console.error('Stack:', error.stack);
     }
-    
     return NextResponse.json(
-      { 
+      {
         error: 'Error al crear el servicio',
-        details: error instanceof Error ? error.message : 'Error desconocido'
+        details: error instanceof Error ? error.message : 'Error desconocido',
       },
       { status: 500 }
     );

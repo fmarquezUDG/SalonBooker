@@ -1,60 +1,62 @@
 // src/app/api/cliente/[id]/citas/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
+
+type CitaWith = Prisma.CitaGetPayload<{
+  include: {
+    servicio: {
+      select: {
+        nombre: true;
+        precio: true;
+        salon: { select: { nombre: true } };
+      };
+    };
+  };
+}>;
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const clienteId = parseInt(id);
+    const clienteId = parseInt(params.id, 10);
+    if (Number.isNaN(clienteId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
 
-    console.log('📋 Obteniendo citas del cliente:', clienteId);
-
-    // Obtener citas del cliente
-    const citas = await prisma.cita.findMany({
-      where: {
-        usuario_id: clienteId
-      },
+    const citas: CitaWith[] = await prisma.cita.findMany({
+      where: { usuario_id: clienteId },
       include: {
         servicio: {
           select: {
             nombre: true,
-            precio: true
-          }
+            precio: true,
+            salon: { select: { nombre: true } },
+          },
         },
-        salon: {
-          select: {
-            nombre: true
-          }
-        }
       },
-      orderBy: {
-        fecha: 'desc'
-      }
+      orderBy: { fecha: 'desc' },
     });
 
-    // Formatear citas
-    const citasFormateadas = citas.map(cita => ({
+    const citasFormateadas = citas.map((cita) => ({
       id: cita.id,
       servicio: cita.servicio.nombre,
-      salon: cita.salon.nombre,
+      salon: cita.servicio.salon?.nombre ?? 'No disponible',
       fecha: new Date(cita.fecha).toLocaleDateString('es-MX', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       }),
       hora: cita.hora,
-      estado: cita.estado as 'pendiente' | 'confirmada' | 'completada' | 'cancelada',
-      monto: `$${Number(cita.servicio.precio).toLocaleString('es-MX')}`
+      estado:
+        (cita.estado as 'pendiente' | 'confirmada' | 'completada' | 'cancelada') ??
+        'pendiente',
+      monto: `$${Number(cita.servicio.precio).toLocaleString('es-MX')}`,
     }));
 
-    console.log(`✅ Citas encontradas: ${citasFormateadas.length}`);
-
     return NextResponse.json(citasFormateadas);
-
   } catch (error) {
     console.error('❌ Error al obtener citas del cliente:', error);
     return NextResponse.json(

@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     } 
     
     // Si es usuario (cliente), debe seleccionar un salón
-    else if (tipo_usuario === 'usuario') {
+    if (tipo_usuario === 'usuario') {
       if (!salon_id) {
         return NextResponse.json(
           { error: 'Debes seleccionar un salón' },
@@ -186,6 +186,12 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     }
+
+    // Si es admin_app u otro tipo no manejado
+    return NextResponse.json(
+      { error: 'Tipo de usuario no soportado para registro público' },
+      { status: 400 }
+    );
 
   } catch (error) {
     console.error('❌ Error en registro:', error);

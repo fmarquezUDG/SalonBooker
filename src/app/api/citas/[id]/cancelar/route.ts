@@ -3,25 +3,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const citaId = parseInt(id);
+    const citaId = parseInt(params.id, 10);
 
     console.log('❌ Cancelando cita:', citaId);
 
     // Verificar que la cita existe
     const cita = await prisma.cita.findUnique({
-      where: { id: citaId }
+      where: { id: citaId },
     });
 
     if (!cita) {
-      return NextResponse.json(
-        { error: 'Cita no encontrada' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Cita no encontrada' }, { status: 404 });
     }
 
     // Verificar que la cita no esté completada
@@ -43,7 +39,7 @@ export async function PATCH(
     // Cancelar la cita
     const citaCancelada = await prisma.cita.update({
       where: { id: citaId },
-      data: { estado: 'cancelada' }
+      data: { estado: 'cancelada' },
     });
 
     console.log('✅ Cita cancelada exitosamente');
@@ -51,9 +47,8 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       message: 'Cita cancelada exitosamente',
-      cita: citaCancelada
+      cita: citaCancelada,
     });
-
   } catch (error) {
     console.error('❌ Error al cancelar cita:', error);
     return NextResponse.json(

@@ -1,3 +1,4 @@
+// src/app/api/admin/salones/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
@@ -22,26 +23,14 @@ interface SalonWithRelations {
 
 export async function GET() {
   try {
-    const salones = await prisma.salon.findMany({
+    const salones = (await prisma.salon.findMany({
       include: {
-        usuarios: {
-          select: {
-            id: true,
-            email: true
-          }
-        },
-        servicios_items: {
-          select: {
-            id: true
-          }
-        }
+        usuarios: { select: { id: true, email: true } },
+        servicios_items: { select: { id: true } },
       },
-      orderBy: {
-        fecha_registro: 'desc'
-      }
-    }) as SalonWithRelations[];
+      orderBy: { fecha_registro: 'desc' },
+    })) as SalonWithRelations[];
 
-    // Calcular estadísticas para cada salón
     const salonesConEstadisticas = await Promise.all(
       salones.map(async (salon: SalonWithRelations) => {
         const inicioMes = new Date();
@@ -50,44 +39,36 @@ export async function GET() {
 
         const citasMes = await prisma.cita.count({
           where: {
-            servicio: {
-              salon_id: salon.id
-            },
-            fecha: {
-              gte: inicioMes
-            }
-          }
+            servicio: { salon_id: salon.id },
+            fecha: { gte: inicioMes },
+          },
         });
 
         const ingresosMes = await prisma.pago.aggregate({
-          _sum: {
-            monto: true
-          },
+          _sum: { monto: true },
           where: {
             estado: 'pagado',
             cita: {
-              servicio: {
-                salon_id: salon.id
-              },
-              fecha: {
-                gte: inicioMes
-              }
-            }
-          }
+              servicio: { salon_id: salon.id },
+              fecha: { gte: inicioMes },
+            },
+          },
         });
 
-        const adminSalon = salon.usuarios.find((user: Usuario) => user.id);
+        const adminSalon = salon.usuarios[0];
         const email = adminSalon?.email || 'No disponible';
 
         return {
           id: salon.id,
           nombre: salon.nombre,
-          email: email,
+          email,
           ciudad: salon.direccion ? salon.direccion.split(',')[0] : 'No especificada',
           estado: salon.aprobado ? 'activo' : 'pendiente',
-          fechaRegistro: salon.fecha_registro ? salon.fecha_registro.toISOString().split('T')[0] : '',
-          ingresosMes: `${(ingresosMes._sum.monto || 0).toLocaleString()}`,
-          citasMes: citasMes
+          fechaRegistro: salon.fecha_registro
+            ? salon.fecha_registro.toISOString().split('T')[0]
+            : '',
+          ingresosMes: `${Number(ingresosMes._sum.monto ?? 0).toLocaleString()}`,
+          citasMes,
         };
       })
     );

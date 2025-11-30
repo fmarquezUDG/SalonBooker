@@ -8,7 +8,9 @@ type TipoUsuario = 'usuario' | 'admin_salon' | 'admin_app';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, email, password, tipo_usuario, salon } = body;
+    const { nombre, email, password, tipo_usuario, salon, salon_id } = body;
+
+    console.log('📥 Datos recibidos:', { nombre, email, tipo_usuario, salon_id, tiene_salon: !!salon });
 
     // Validaciones básicas
     if (!nombre || !email || !password || !tipo_usuario) {
@@ -80,13 +82,15 @@ export async function POST(request: NextRequest) {
           }
         });
 
+        console.log('✅ Salón creado:', nuevoSalon.id, '-', nuevoSalon.nombre);
+
         // Crear el usuario admin del salón
         const nuevoUsuario = await tx.usuario.create({
           data: {
             nombre,
             email: email.toLowerCase(),
             password: hashedPassword,
-            tipo_usuario: tipo_usuario,
+            tipo_usuario: 'admin_salon', // Forzar admin_salon
             salon_id: nuevoSalon.id,
             activo: true
           },
@@ -104,10 +108,10 @@ export async function POST(request: NextRequest) {
           }
         });
 
+        console.log('✅ Admin de salón creado:', nuevoUsuario.email, 'tipo:', nuevoUsuario.tipo_usuario);
+
         return { usuario: nuevoUsuario, salon: nuevoSalon };
       });
-
-      console.log('✅ Salón y admin creados:', result.salon.nombre);
 
       return NextResponse.json(
         {
@@ -117,25 +121,61 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       );
-    } else {
-      // Crear usuario regular (cliente)
+    } 
+    
+    // Si es usuario (cliente), debe seleccionar un salón
+    else if (tipo_usuario === 'usuario') {
+      if (!salon_id) {
+        return NextResponse.json(
+          { error: 'Debes seleccionar un salón' },
+          { status: 400 }
+        );
+      }
+
+      // Verificar que el salón existe y está aprobado
+      const salonExistente = await prisma.salon.findUnique({
+        where: { id: Number(salon_id) }
+      });
+
+      if (!salonExistente) {
+        return NextResponse.json(
+          { error: 'El salón seleccionado no existe' },
+          { status: 400 }
+        );
+      }
+
+      if (!salonExistente.aprobado) {
+        return NextResponse.json(
+          { error: 'El salón seleccionado no está aprobado aún' },
+          { status: 400 }
+        );
+      }
+
+      // Crear usuario cliente asociado al salón
       const nuevoUsuario = await prisma.usuario.create({
         data: {
           nombre,
           email: email.toLowerCase(),
           password: hashedPassword,
-          tipo_usuario: tipo_usuario,
+          tipo_usuario: 'usuario', // Forzar usuario
+          salon_id: Number(salon_id),
           activo: true
         },
         select: {
           id: true,
           nombre: true,
           email: true,
-          tipo_usuario: true
+          tipo_usuario: true,
+          salon: {
+            select: {
+              id: true,
+              nombre: true
+            }
+          }
         }
       });
 
-      console.log('✅ Usuario creado:', nuevoUsuario.email);
+      console.log('✅ Cliente creado:', nuevoUsuario.email, 'tipo:', nuevoUsuario.tipo_usuario, 'salón:', nuevoUsuario.salon?.nombre);
 
       return NextResponse.json(
         {
@@ -148,7 +188,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error en registro:', error);
+    console.error('❌ Error en registro:', error);
     return NextResponse.json(
       { error: 'Error al crear la cuenta. Inténtalo de nuevo.' },
       { status: 500 }

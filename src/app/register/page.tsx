@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, CheckCircle, User, Mail, Lock, Building2 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 type TipoUsuario = 'usuario' | 'admin_salon';
+
+interface Salon {
+  id: number;
+  nombre: string;
+  direccion: string | null;
+  aprobado: boolean;
+}
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,13 +23,38 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>('usuario');
+  const [salonId, setSalonId] = useState<number | null>(null);
   const [nombreSalon, setNombreSalon] = useState("");
   const [direccionSalon, setDireccionSalon] = useState("");
   const [contactoSalon, setContactoSalon] = useState("");
+  const [salones, setSalones] = useState<Salon[]>([]);
+  const [loadingSalones, setLoadingSalones] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+
+  // Cargar salones aprobados cuando el usuario selecciona "Cliente"
+  useEffect(() => {
+    if (tipoUsuario === 'usuario') {
+      fetchSalones();
+    }
+  }, [tipoUsuario]);
+
+  const fetchSalones = async () => {
+    try {
+      setLoadingSalones(true);
+      const response = await fetch('/api/salones/aprobados');
+      if (response.ok) {
+        const data = await response.json();
+        setSalones(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar salones:', error);
+    } finally {
+      setLoadingSalones(false);
+    }
+  };
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
@@ -69,6 +101,13 @@ export default function RegisterPage() {
       return;
     }
 
+    // Validar que el cliente haya seleccionado un salón
+    if (tipoUsuario === 'usuario' && !salonId) {
+      setError('Por favor selecciona un salón');
+      setIsLoading(false);
+      return;
+    }
+
     if (tipoUsuario === 'admin_salon' && !nombreSalon.trim()) {
       setError('El nombre del salón es requerido');
       setIsLoading(false);
@@ -76,24 +115,48 @@ export default function RegisterPage() {
     }
     
     try {
+      interface RegisterData {
+        nombre: string;
+        email: string;
+        password: string;
+        tipo_usuario: TipoUsuario;
+        salon_id?: number;
+        salon?: {
+          nombre: string;
+          direccion: string;
+          contacto: string;
+        };
+      }
+
+      const requestBody: RegisterData = {
+        nombre,
+        email,
+        password,
+        tipo_usuario: tipoUsuario,
+      };
+
+      // Si es cliente, enviar salon_id
+      if (tipoUsuario === 'usuario') {
+        requestBody.salon_id = salonId as number;
+      }
+
+      // Si es admin_salon, enviar datos del salón
+      if (tipoUsuario === 'admin_salon') {
+        requestBody.salon = {
+          nombre: nombreSalon,
+          direccion: direccionSalon,
+          contacto: contactoSalon
+        };
+      }
+
+      console.log('📤 Enviando registro:', requestBody);
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          nombre,
-          email,
-          password,
-          tipo_usuario: tipoUsuario,
-          ...(tipoUsuario === 'admin_salon' && {
-            salon: {
-              nombre: nombreSalon,
-              direccion: direccionSalon,
-              contacto: contactoSalon
-            }
-          })
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -164,7 +227,9 @@ export default function RegisterPage() {
                     ¡Registro exitoso!
                   </h3>
                   <p className="text-green-700 text-xs md:text-sm lg:text-base mt-1">
-                    Tu cuenta ha sido creada. Redirigiendo al login...
+                    {tipoUsuario === 'admin_salon' 
+                      ? 'Tu cuenta y salón han sido creados. El salón está pendiente de aprobación. Redirigiendo...'
+                      : 'Tu cuenta ha sido creada. Redirigiendo al login...'}
                   </p>
                 </div>
               </div>
@@ -259,6 +324,40 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+
+              {/* Selector de Salón (solo para clientes) */}
+              {tipoUsuario === 'usuario' && (
+                <div>
+                  <label htmlFor="salon" className="block text-sm md:text-base lg:text-lg font-semibold text-gray-700 mb-2 lg:mb-4">
+                    Selecciona tu salón *
+                  </label>
+                  {loadingSalones ? (
+                    <div className="text-center py-4">
+                      <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-sm text-gray-600 mt-2">Cargando salones...</p>
+                    </div>
+                  ) : salones.length === 0 ? (
+                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                      <p className="text-yellow-800">No hay salones disponibles en este momento.</p>
+                    </div>
+                  ) : (
+                    <select
+                      id="salon"
+                      value={salonId || ''}
+                      onChange={(e) => setSalonId(Number(e.target.value))}
+                      className="w-full px-3 py-2 md:px-4 md:py-3 lg:px-6 lg:py-4 text-sm md:text-base lg:text-lg text-black rounded-xl lg:rounded-2xl border-2 border-gray-200 focus:border-purple-500 focus:outline-none transition-colors bg-white/70"
+                      required
+                    >
+                      <option value="">-- Selecciona un salón --</option>
+                      {salones.map((salon) => (
+                        <option key={salon.id} value={salon.id}>
+                          {salon.nombre} {salon.direccion ? `- ${salon.direccion}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Datos del Salón (solo si es admin_salon) */}
               {tipoUsuario === 'admin_salon' && (

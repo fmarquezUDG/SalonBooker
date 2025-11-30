@@ -1,64 +1,65 @@
-// src/app/api/admin/salones/[id]/aprobar/route.ts
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+// src/app/api/cliente/[id]/citas/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export const PATCH = async (
-  _request: NextRequest,
-  ctx: { params: { id: string } }
-) => {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const salonId = Number(ctx.params.id);
-    if (Number.isNaN(salonId)) {
-      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
-    }
+    const { id } = await params;
+    const clienteId = parseInt(id, 10);
 
-    const salon = await prisma.salon.update({
-      where: { id: salonId },
-      data: { aprobado: true },
-      include: {
-        usuarios: { select: { id: true, email: true, nombre: true, tipo_usuario: true } },
-        servicios_items: { select: { id: true } },
-      },
-    });
+    console.log('📋 Obteniendo citas del cliente:', clienteId);
 
-    const inicioMes = new Date();
-    inicioMes.setDate(1);
-    inicioMes.setHours(0, 0, 0, 0);
-
-    const citasMes = await prisma.cita.count({
-      where: { servicio: { salon_id: salon.id }, fecha: { gte: inicioMes } },
-    });
-
-    const ingresosMes = await prisma.pago.aggregate({
-      _sum: { monto: true },
+    // Obtener citas del cliente
+    const citas = await prisma.cita.findMany({
       where: {
-        estado: 'pagado',
-        cita: { servicio: { salon_id: salon.id }, fecha: { gte: inicioMes } },
+        usuario_id: clienteId
       },
+      include: {
+        servicio: {
+          select: {
+            nombre: true,
+            precio: true,
+            salon: {
+              select: {
+                nombre: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        fecha: 'desc'
+      }
     });
 
-    const adminSalon =
-      salon.usuarios.find((u) => u.tipo_usuario === 'admin_salon') ?? salon.usuarios[0];
+    // Formatear citas
+    const citasFormateadas = citas.map(cita => ({
+      id: cita.id,
+      servicio: cita.servicio.nombre,
+      salon: cita.servicio.salon.nombre,
+      fecha: new Date(cita.fecha).toLocaleDateString('es-MX', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      hora: cita.hora,
+      estado: cita.estado as 'pendiente' | 'confirmada' | 'completada' | 'cancelada',
+      monto: `$${Number(cita.servicio.precio).toLocaleString('es-MX')}`
+    }));
 
-    return NextResponse.json({
-      success: true,
-      message: 'Salón aprobado',
-      salon: {
-        id: salon.id,
-        nombre: salon.nombre,
-        aprobado: salon.aprobado ?? false,
-        usuarios: salon.usuarios,
-        servicios_items: salon.servicios_items,
-        estadisticas: {
-          citasMes,
-          ingresosMes: Number(ingresosMes._sum.monto ?? 0),
-          emailAdmin: adminSalon?.email ?? 'No disponible',
-        },
-      },
-    });
+    console.log(`✅ Citas encontradas: ${citasFormateadas.length}`);
+
+    return NextResponse.json(citasFormateadas);
+
   } catch (error) {
-    console.error('Error al aprobar salón:', error);
-    return NextResponse.json({ error: 'No se pudo aprobar el salón' }, { status: 500 });
+    console.error('❌ Error al obtener citas del cliente:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener las citas' },
+      { status: 500 }
+    );
   }
-};
+}

@@ -4,10 +4,11 @@ import { prisma } from '@/lib/db';
 
 export async function PATCH(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const citaId = parseInt(params.id, 10);
+    const { id } = await params;
+    const citaId = parseInt(id, 10);
 
     console.log('❌ Cancelando cita:', citaId);
 

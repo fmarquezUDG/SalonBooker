@@ -4,10 +4,11 @@ import { prisma } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const salonId = parseInt(params.id);
+    const { id } = await params;
+    const salonId = parseInt(id, 10);
 
     // Obtener fechas
     const hoy = new Date();

@@ -5,10 +5,11 @@ import { prisma } from '@/lib/db';
 // GET - Obtener servicios del salón
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const salonId = parseInt(params.id, 10);
+    const { id } = await params;
+    const salonId = parseInt(id, 10);
 
     const servicios = await prisma.servicioItem.findMany({
       where: { salon_id: salonId },
@@ -35,10 +36,11 @@ export async function GET(
 // POST - Crear nuevo servicio
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const salonId = parseInt(params.id, 10);
+    const { id } = await params;
+    const salonId = parseInt(id, 10);
     const body = await request.json();
     const { nombre, descripcion, duracion, precio } = body;
 
@@ -69,12 +71,12 @@ export async function POST(
 
       if (!categoria) {
         categoria = await prisma.servicioCategoria.create({
-          data: { nombre: 'General' }, // sin descripcion
+          data: { nombre: 'General' },
         });
         console.log('✅ Categoría creada:', categoria.id);
       }
 
-      // Crear subcategoría sin descripcion
+      // Crear subcategoría
       const nuevaSubcategoria = await prisma.servicioSubcategoria.create({
         data: {
           nombre: 'General',

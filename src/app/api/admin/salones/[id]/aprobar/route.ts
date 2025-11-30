@@ -1,19 +1,19 @@
-// src/app/api/admin/salones/[id]/aprobar/route.ts
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export const PATCH = async (
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) => {
   try {
-    const salonId = Number(params.id);
+    const { id } = await params;
+    const salonId = Number(id);
+    
     if (Number.isNaN(salonId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    // 1) Aprobar el salón
     const salon = await prisma.salon.update({
       where: { id: salonId },
       data: { aprobado: true },
@@ -30,7 +30,6 @@ export const PATCH = async (
       },
     });
 
-    // 2) Estadísticas del mes para ese salón
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);

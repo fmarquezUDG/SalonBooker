@@ -1,14 +1,14 @@
 // src/app/api/salon/[id]/clientes/route.ts
-// src/app/api/salon/[id]/clientes/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const salonId = parseInt(params.id, 10);
+    const { id } = await params;
+    const salonId = parseInt(id, 10);
 
     const clientes = await prisma.usuario.findMany({
       where: {

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 
 export async function PATCH(
   _request: NextRequest,
-  { params }: { params: { id: string } } // ← sin Promise aquí
+  { params }: { params: { id: string } }
 ) {
   try {
     const salonId = Number(params.id);
@@ -12,7 +12,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    // 1) Actualizar el estado del salón a aprobado
+    // 1) Aprobar el salón
     const salon = await prisma.salon.update({
       where: { id: salonId },
       data: { aprobado: true },
@@ -25,13 +25,11 @@ export async function PATCH(
             tipo_usuario: true,
           },
         },
-        servicios_items: {
-          select: { id: true },
-        },
+        servicios_items: { select: { id: true } },
       },
     });
 
-    // 2) Calcular estadísticas del mes para ese salón (igual que en tu GET)
+    // 2) Estadísticas del mes para ese salón
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);

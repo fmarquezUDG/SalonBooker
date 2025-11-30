@@ -3,73 +3,81 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
 export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: { id: string } } // ← sin Promise aquí
 ) {
   try {
-    const salonId = parseInt(params.id);
-    const { aprobado } = await request.json();
-
-    // Validar que aprobado sea booleano
-    if (typeof aprobado !== 'boolean') {
-      return NextResponse.json(
-        { error: 'El campo "aprobado" debe ser true o false' },
-        { status: 400 }
-      );
+    const salonId = Number(params.id);
+    if (Number.isNaN(salonId)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    // Verificar que el salón existe
-    const salonExistente = await prisma.salon.findUnique({
-      where: { id: salonId }
-    });
-
-    if (!salonExistente) {
-      return NextResponse.json(
-        { error: 'Salón no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    // Actualizar el estado de aprobación
-    const salonActualizado = await prisma.salon.update({
+    // 1) Actualizar el estado del salón a aprobado
+    const salon = await prisma.salon.update({
       where: { id: salonId },
-      data: { aprobado },
-      select: {
-        id: true,
-        nombre: true,
-        aprobado: true,
+      data: { aprobado: true },
+      include: {
         usuarios: {
-          where: {
-            tipo_usuario: 'admin_salon'
-          },
           select: {
+            id: true,
             email: true,
-            nombre: true
-          }
-        }
-      }
+            nombre: true,
+            tipo_usuario: true,
+          },
+        },
+        servicios_items: {
+          select: { id: true },
+        },
+      },
     });
 
-    console.log(
-      aprobado 
-        ? `✅ Salón APROBADO: ${salonActualizado.nombre} (ID: ${salonId})`
-        : `❌ Salón RECHAZADO: ${salonActualizado.nombre} (ID: ${salonId})`
-    );
+    // 2) Calcular estadísticas del mes para ese salón (igual que en tu GET)
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    inicioMes.setHours(0, 0, 0, 0);
 
-    // TODO: Aquí podrías enviar un email al admin del salón notificando la aprobación/rechazo
+    const citasMes = await prisma.cita.count({
+      where: {
+        servicio: { salon_id: salon.id },
+        fecha: { gte: inicioMes },
+      },
+    });
+
+    const ingresosMes = await prisma.pago.aggregate({
+      _sum: { monto: true },
+      where: {
+        estado: 'pagado',
+        cita: {
+          servicio: { salon_id: salon.id },
+          fecha: { gte: inicioMes },
+        },
+      },
+    });
+
+    const adminSalon =
+      salon.usuarios.find(u => u.tipo_usuario === 'admin_salon') ??
+      salon.usuarios[0];
 
     return NextResponse.json({
       success: true,
-      message: aprobado 
-        ? 'Salón aprobado exitosamente'
-        : 'Salón rechazado',
-      salon: salonActualizado
+      message: 'Salón aprobado',
+      salon: {
+        id: salon.id,
+        nombre: salon.nombre,
+        aprobado: salon.aprobado ?? false,
+        usuarios: salon.usuarios,
+        servicios_items: salon.servicios_items,
+        estadisticas: {
+          citasMes,
+          ingresosMes: Number(ingresosMes._sum.monto ?? 0),
+          emailAdmin: adminSalon?.email ?? 'No disponible',
+        },
+      },
     });
-
   } catch (error) {
-    console.error('Error al aprobar/rechazar salón:', error);
+    console.error('Error al aprobar salón:', error);
     return NextResponse.json(
-      { error: 'Error al procesar la solicitud' },
+      { error: 'No se pudo aprobar el salón' },
       { status: 500 }
     );
   }

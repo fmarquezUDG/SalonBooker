@@ -28,19 +28,22 @@ model Salon {
 }
 
 model Usuario {
-  id              Int                   @id @default(autoincrement())
-  nombre          String                @db.VarChar(100)
-  email           String                @unique(map: "email") @db.VarChar(100)
-  password        String                @db.VarChar(255)
-  tipo_usuario    usuarios_tipo_usuario
-  salon_id        Int?
-  activo          Boolean?              @default(true)
-  tipo_usuario_id Int?
-  citas           Cita[]
-  notificaciones  Notificacion[]
-  salon           Salon?                @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
+  id                     Int                   @id @default(autoincrement())
+  nombre                 String                @db.VarChar(100)
+  email                  String                @unique(map: "email") @db.VarChar(100)
+  password               String                @db.VarChar(255)
+  tipo_usuario           usuarios_tipo_usuario
+  salon_id               Int?
+  activo                 Boolean?              @default(true)
+  tipo_usuario_id        Int?
+  reset_password_token   String?               @db.VarChar(255)
+  reset_password_expires DateTime?             @db.DateTime(0)
+  citas                  Cita[]
+  notificaciones         Notificacion[]
+  salon                  Salon?                @relation(fields: [salon_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_ibfk_1")
 
   @@index([salon_id], map: "salon_id")
+  @@index([reset_password_token], map: "idx_reset_password_token")
   @@map("usuarios")
 }
 

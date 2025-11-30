@@ -1,11 +1,12 @@
 // src/app/api/admin/salones/[id]/aprobar/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-export async function PATCH(
+export const PATCH = async (
   _request: NextRequest,
   { params }: { params: { id: string } }
-) {
+) => {
   try {
     const salonId = Number(params.id);
     if (Number.isNaN(salonId)) {
@@ -53,7 +54,7 @@ export async function PATCH(
     });
 
     const adminSalon =
-      salon.usuarios.find(u => u.tipo_usuario === 'admin_salon') ??
+      salon.usuarios.find((u) => u.tipo_usuario === 'admin_salon') ??
       salon.usuarios[0];
 
     return NextResponse.json({
@@ -79,4 +80,4 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+};

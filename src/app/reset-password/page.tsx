@@ -1,12 +1,13 @@
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,39 +16,39 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-  
+
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
 
   // Verificar token al cargar la página
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
         setTokenValid(false);
-        setError('Token de recuperación no encontrado');
+        setError("Token de recuperación no encontrado");
         return;
       }
 
       try {
-        const response = await fetch('/api/auth/verify-reset-token', {
-          method: 'POST',
+        const response = await fetch("/api/auth/verify-reset-token", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ token }),
         });
 
         const data = await response.json();
         setTokenValid(data.valid);
-        
+
         if (!data.valid) {
-          setError(data.error || 'El enlace de recuperación es inválido o ha expirado');
+          setError(data.error || "El enlace de recuperación es inválido o ha expirado");
         }
       } catch (error) {
-        console.error('Error verificando token:', error);
+        console.error("Error verificando token:", error);
         setTokenValid(false);
-        setError('Error al verificar el enlace de recuperación');
+        setError("Error al verificar el enlace de recuperación");
       }
     };
 
@@ -56,16 +57,16 @@ export default function ResetPasswordPage() {
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
-      return 'La contraseña debe tener al menos 8 caracteres';
+      return "La contraseña debe tener al menos 8 caracteres";
     }
     if (!/[A-Z]/.test(password)) {
-      return 'La contraseña debe contener al menos una letra mayúscula';
+      return "La contraseña debe contener al menos una letra mayúscula";
     }
     if (!/[a-z]/.test(password)) {
-      return 'La contraseña debe contener al menos una letra minúscula';
+      return "La contraseña debe contener al menos una letra minúscula";
     }
     if (!/[0-9]/.test(password)) {
-      return 'La contraseña debe contener al menos un número';
+      return "La contraseña debe contener al menos un número";
     }
     return null;
   };
@@ -74,10 +75,10 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     // Validar que las contraseñas coincidan
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setError("Las contraseñas no coinciden");
       setIsLoading(false);
       return;
     }
@@ -91,10 +92,10 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ token, password }),
       });
@@ -105,14 +106,14 @@ export default function ResetPasswordPage() {
         setSuccess(true);
         // Redirigir al login después de 3 segundos
         setTimeout(() => {
-          router.push('/login');
+          router.push("/login");
         }, 3000);
       } else {
-        setError(data.error || 'Error al restablecer la contraseña');
+        setError(data.error || "Error al restablecer la contraseña");
       }
     } catch (error) {
-      console.error('Error en reset password:', error);
-      setError('Error de conexión. Inténtalo de nuevo.');
+      console.error("Error en reset password:", error);
+      setError("Error de conexión. Inténtalo de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -142,7 +143,10 @@ export default function ResetPasswordPage() {
 
       <div className="relative w-full max-w-sm md:max-w-md lg:max-w-2xl xl:max-w-4xl">
         {/* Back to login link */}
-        <Link href="/login" className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors mb-6 md:mb-8 lg:mb-12">
+        <Link
+          href="/login"
+          className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 transition-colors mb-6 md:mb-8 lg:mb-12"
+        >
           <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6" />
           <span className="font-medium text-lg md:text-base lg:text-lg">Volver al login</span>
         </Link>
@@ -151,9 +155,9 @@ export default function ResetPasswordPage() {
         <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-6 md:p-8 lg:p-16 xl:p-24 border border-purple-100">
           {/* Logo and Title */}
           <div className="flex items-center justify-center shadow-lg">
-            <Image 
-              src="/salonbooker.png" 
-              alt="SalonBooker" 
+            <Image
+              src="/salonbooker.png"
+              alt="SalonBooker"
               width={300}
               height={250}
               className="object-contain md:w-[60px] md:h-[60px] lg:w-[120px] lg:h-[120px] xl:w-[150px] xl:h-[150px]"
@@ -163,14 +167,15 @@ export default function ResetPasswordPage() {
             <h1 className="text-2xl md:text-3xl lg:text-5xl xl:text-7xl font-bold bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent mb-2 lg:mb-4">
               SalonBooker
             </h1>
-            <br/>
+            <br />
             <h2 className="text-xl md:text-2xl lg:text-4xl font-bold text-gray-800 mb-2 lg:mb-4">
               Restablecer contraseña
             </h2>
             <p className="text-gray-600 text-sm md:text-base lg:text-xl xl:text-2xl">
               Crea una nueva contraseña segura para tu cuenta
             </p>
-            <br/><br/>
+            <br />
+            <br />
           </div>
 
           <div className="max-w-md lg:max-w-lg xl:max-w-xl mx-auto">
@@ -193,12 +198,12 @@ export default function ResetPasswordPage() {
                         Enlace inválido o expirado
                       </h3>
                       <p className="text-red-700 text-xs md:text-sm lg:text-base mt-1">
-                        {error || 'Este enlace de recuperación ya no es válido. Por favor solicita uno nuevo.'}
+                        {error || "Este enlace de recuperación ya no es válido. Por favor solicita uno nuevo."}
                       </p>
                     </div>
                   </div>
                 </div>
-                <Link 
+                <Link
                   href="/forgot-password"
                   className="block w-full py-2.5 md:py-3 lg:py-5 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-md md:text-base lg:text-xl rounded-xl lg:rounded-2xl hover:shadow-lg hover:scale-105 transition-all duration-300 text-center"
                 >
@@ -257,7 +262,7 @@ export default function ResetPasswordPage() {
                       {showPassword ? <EyeOff className="w-5 h-5 md:w-6 md:h-6" /> : <Eye className="w-5 h-5 md:w-6 md:h-6" />}
                     </button>
                   </div>
-                  
+
                   {/* Password Strength Indicator */}
                   {password && (
                     <div className="mt-2">
@@ -268,23 +273,23 @@ export default function ResetPasswordPage() {
                             className={`h-1 flex-1 rounded-full transition-colors ${
                               level <= passwordStrength
                                 ? passwordStrength <= 2
-                                  ? 'bg-red-500'
+                                  ? "bg-red-500"
                                   : passwordStrength <= 3
-                                  ? 'bg-yellow-500'
-                                  : 'bg-green-500'
-                                : 'bg-gray-200'
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
+                                : "bg-gray-200"
                             }`}
                           />
                         ))}
                       </div>
                       <p className="text-xs md:text-sm mt-1 text-gray-600">
-                        {passwordStrength <= 2 && 'Contraseña débil'}
-                        {passwordStrength === 3 && 'Contraseña media'}
-                        {passwordStrength >= 4 && 'Contraseña fuerte'}
+                        {passwordStrength <= 2 && "Contraseña débil"}
+                        {passwordStrength === 3 && "Contraseña media"}
+                        {passwordStrength >= 4 && "Contraseña fuerte"}
                       </p>
                     </div>
                   )}
-                  
+
                   <p className="mt-2 text-xs md:text-sm text-gray-500">
                     Mínimo 8 caracteres, con mayúsculas, minúsculas y números
                   </p>
@@ -314,13 +319,11 @@ export default function ResetPasswordPage() {
                     </button>
                   </div>
                   {confirmPassword && password !== confirmPassword && (
-                    <p className="mt-2 text-xs md:text-sm text-red-600">
-                      Las contraseñas no coinciden
-                    </p>
+                    <p className="mt-2 text-xs md:text-sm text-red-600">Las contraseñas no coinciden</p>
                   )}
                 </div>
 
-                <br/>
+                <br />
 
                 {/* Submit Button */}
                 <button
@@ -345,10 +348,18 @@ export default function ResetPasswordPage() {
 
       <style jsx>{`
         @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
         }
         .animate-blob {
           animation: blob 7s infinite;
@@ -361,5 +372,13 @@ export default function ResetPasswordPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="py-8 text-center">Cargando…</div>}>
+      <ResetPasswordInner />
+    </Suspense>
   );
 }
